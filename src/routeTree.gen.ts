@@ -9,38 +9,138 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedProteinRouteImport } from './routes/_authenticated/protein'
+import { Route as AuthenticatedMedicationsRouteImport } from './routes/_authenticated/medications'
+import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated/history'
+import { Route as AuthenticatedCaloriesRouteImport } from './routes/_authenticated/calories'
+import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedProteinRoute = AuthenticatedProteinRouteImport.update({
+  id: '/protein',
+  path: '/protein',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedMedicationsRoute =
+  AuthenticatedMedicationsRouteImport.update({
+    id: '/medications',
+    path: '/medications',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedHistoryRoute = AuthenticatedHistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedCaloriesRoute = AuthenticatedCaloriesRouteImport.update({
+  id: '/calories',
+  path: '/calories',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
+  id: '/app',
+  path: '/app',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/app': typeof AuthenticatedAppRoute
+  '/calories': typeof AuthenticatedCaloriesRoute
+  '/history': typeof AuthenticatedHistoryRoute
+  '/medications': typeof AuthenticatedMedicationsRoute
+  '/protein': typeof AuthenticatedProteinRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/app': typeof AuthenticatedAppRoute
+  '/calories': typeof AuthenticatedCaloriesRoute
+  '/history': typeof AuthenticatedHistoryRoute
+  '/medications': typeof AuthenticatedMedicationsRoute
+  '/protein': typeof AuthenticatedProteinRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/_authenticated/app': typeof AuthenticatedAppRoute
+  '/_authenticated/calories': typeof AuthenticatedCaloriesRoute
+  '/_authenticated/history': typeof AuthenticatedHistoryRoute
+  '/_authenticated/medications': typeof AuthenticatedMedicationsRoute
+  '/_authenticated/protein': typeof AuthenticatedProteinRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/app'
+    | '/calories'
+    | '/history'
+    | '/medications'
+    | '/protein'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/auth'
+    | '/app'
+    | '/calories'
+    | '/history'
+    | '/medications'
+    | '/protein'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/_authenticated/app'
+    | '/_authenticated/calories'
+    | '/_authenticated/history'
+    | '/_authenticated/medications'
+    | '/_authenticated/protein'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  AuthRoute: typeof AuthRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +148,69 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/protein': {
+      id: '/_authenticated/protein'
+      path: '/protein'
+      fullPath: '/protein'
+      preLoaderRoute: typeof AuthenticatedProteinRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/medications': {
+      id: '/_authenticated/medications'
+      path: '/medications'
+      fullPath: '/medications'
+      preLoaderRoute: typeof AuthenticatedMedicationsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/history': {
+      id: '/_authenticated/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof AuthenticatedHistoryRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/calories': {
+      id: '/_authenticated/calories'
+      path: '/calories'
+      fullPath: '/calories'
+      preLoaderRoute: typeof AuthenticatedCaloriesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/app': {
+      id: '/_authenticated/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AuthenticatedAppRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
+interface AuthenticatedRouteChildren {
+  AuthenticatedAppRoute: typeof AuthenticatedAppRoute
+  AuthenticatedCaloriesRoute: typeof AuthenticatedCaloriesRoute
+  AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
+  AuthenticatedMedicationsRoute: typeof AuthenticatedMedicationsRoute
+  AuthenticatedProteinRoute: typeof AuthenticatedProteinRoute
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAppRoute: AuthenticatedAppRoute,
+  AuthenticatedCaloriesRoute: AuthenticatedCaloriesRoute,
+  AuthenticatedHistoryRoute: AuthenticatedHistoryRoute,
+  AuthenticatedMedicationsRoute: AuthenticatedMedicationsRoute,
+  AuthenticatedProteinRoute: AuthenticatedProteinRoute,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  AuthRoute: AuthRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
