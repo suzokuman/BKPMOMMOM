@@ -14,7 +14,180 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      calorie_items: {
+        Row: {
+          carbs_g: number
+          checked: boolean
+          created_at: string
+          date: string
+          fat_g: number
+          id: string
+          kcal: number
+          name: string
+          protein_g: number
+          user_id: string
+        }
+        Insert: {
+          carbs_g?: number
+          checked?: boolean
+          created_at?: string
+          date: string
+          fat_g?: number
+          id?: string
+          kcal?: number
+          name: string
+          protein_g?: number
+          user_id: string
+        }
+        Update: {
+          carbs_g?: number
+          checked?: boolean
+          created_at?: string
+          date?: string
+          fat_g?: number
+          id?: string
+          kcal?: number
+          name?: string
+          protein_g?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      daily_calorie_goals: {
+        Row: {
+          created_at: string
+          date: string
+          target_carbs_g: number | null
+          target_fat_g: number | null
+          target_kcal: number
+          target_protein_g: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          target_carbs_g?: number | null
+          target_fat_g?: number | null
+          target_kcal: number
+          target_protein_g?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          target_carbs_g?: number | null
+          target_fat_g?: number | null
+          target_kcal?: number
+          target_protein_g?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      daily_protein_goals: {
+        Row: {
+          created_at: string
+          date: string
+          target_g: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          target_g: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          target_g?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      medications: {
+        Row: {
+          created_at: string
+          dose_mg: number
+          id: string
+          name: string
+          scheduled_at: string
+          taken: boolean
+          taken_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dose_mg: number
+          id?: string
+          name: string
+          scheduled_at: string
+          taken?: boolean
+          taken_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dose_mg?: number
+          id?: string
+          name?: string
+          scheduled_at?: string
+          taken?: boolean
+          taken_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
+      protein_items: {
+        Row: {
+          checked: boolean
+          created_at: string
+          date: string
+          grams: number
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          checked?: boolean
+          created_at?: string
+          date: string
+          grams: number
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          checked?: boolean
+          created_at?: string
+          date?: string
+          grams?: number
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
