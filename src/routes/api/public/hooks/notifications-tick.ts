@@ -212,7 +212,7 @@ export const Route = createFileRoute("/api/public/hooks/notifications-tick")({
                 const res = await fetch(sub.endpoint, {
                   method: payload.method,
                   headers: payload.headers,
-                  body: payload.body,
+                  body: payload.body as unknown as BodyInit,
                 });
                 if (res.ok || res.status === 201) results.sent++;
                 else if (res.status === 404 || res.status === 410) {
