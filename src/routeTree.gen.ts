@@ -19,8 +19,8 @@ import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedCaloriesRouteImport } from './routes/_authenticated/calories'
 import { Route as AuthenticatedBillingRouteImport } from './routes/_authenticated/billing'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
-import { Route as ApiPublicHooksStripeWebhookRouteImport } from './routes/api/public/hooks/stripe-webhook'
 import { Route as ApiPublicHooksNotificationsTickRouteImport } from './routes/api/public/hooks/notifications-tick'
+import { Route as ApiPublicHooksMercadopagoWebhookRouteImport } from './routes/api/public/hooks/mercadopago-webhook'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -72,16 +72,16 @@ const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
   path: '/app',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const ApiPublicHooksStripeWebhookRoute =
-  ApiPublicHooksStripeWebhookRouteImport.update({
-    id: '/api/public/hooks/stripe-webhook',
-    path: '/api/public/hooks/stripe-webhook',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const ApiPublicHooksNotificationsTickRoute =
   ApiPublicHooksNotificationsTickRouteImport.update({
     id: '/api/public/hooks/notifications-tick',
     path: '/api/public/hooks/notifications-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksMercadopagoWebhookRoute =
+  ApiPublicHooksMercadopagoWebhookRouteImport.update({
+    id: '/api/public/hooks/mercadopago-webhook',
+    path: '/api/public/hooks/mercadopago-webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
 
@@ -95,8 +95,8 @@ export interface FileRoutesByFullPath {
   '/medications': typeof AuthenticatedMedicationsRoute
   '/protein': typeof AuthenticatedProteinRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/api/public/hooks/mercadopago-webhook': typeof ApiPublicHooksMercadopagoWebhookRoute
   '/api/public/hooks/notifications-tick': typeof ApiPublicHooksNotificationsTickRoute
-  '/api/public/hooks/stripe-webhook': typeof ApiPublicHooksStripeWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -108,8 +108,8 @@ export interface FileRoutesByTo {
   '/medications': typeof AuthenticatedMedicationsRoute
   '/protein': typeof AuthenticatedProteinRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/api/public/hooks/mercadopago-webhook': typeof ApiPublicHooksMercadopagoWebhookRoute
   '/api/public/hooks/notifications-tick': typeof ApiPublicHooksNotificationsTickRoute
-  '/api/public/hooks/stripe-webhook': typeof ApiPublicHooksStripeWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -123,8 +123,8 @@ export interface FileRoutesById {
   '/_authenticated/medications': typeof AuthenticatedMedicationsRoute
   '/_authenticated/protein': typeof AuthenticatedProteinRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/api/public/hooks/mercadopago-webhook': typeof ApiPublicHooksMercadopagoWebhookRoute
   '/api/public/hooks/notifications-tick': typeof ApiPublicHooksNotificationsTickRoute
-  '/api/public/hooks/stripe-webhook': typeof ApiPublicHooksStripeWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -138,8 +138,8 @@ export interface FileRouteTypes {
     | '/medications'
     | '/protein'
     | '/settings'
+    | '/api/public/hooks/mercadopago-webhook'
     | '/api/public/hooks/notifications-tick'
-    | '/api/public/hooks/stripe-webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -151,8 +151,8 @@ export interface FileRouteTypes {
     | '/medications'
     | '/protein'
     | '/settings'
+    | '/api/public/hooks/mercadopago-webhook'
     | '/api/public/hooks/notifications-tick'
-    | '/api/public/hooks/stripe-webhook'
   id:
     | '__root__'
     | '/'
@@ -165,16 +165,16 @@ export interface FileRouteTypes {
     | '/_authenticated/medications'
     | '/_authenticated/protein'
     | '/_authenticated/settings'
+    | '/api/public/hooks/mercadopago-webhook'
     | '/api/public/hooks/notifications-tick'
-    | '/api/public/hooks/stripe-webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicHooksMercadopagoWebhookRoute: typeof ApiPublicHooksMercadopagoWebhookRoute
   ApiPublicHooksNotificationsTickRoute: typeof ApiPublicHooksNotificationsTickRoute
-  ApiPublicHooksStripeWebhookRoute: typeof ApiPublicHooksStripeWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -249,18 +249,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/api/public/hooks/stripe-webhook': {
-      id: '/api/public/hooks/stripe-webhook'
-      path: '/api/public/hooks/stripe-webhook'
-      fullPath: '/api/public/hooks/stripe-webhook'
-      preLoaderRoute: typeof ApiPublicHooksStripeWebhookRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/public/hooks/notifications-tick': {
       id: '/api/public/hooks/notifications-tick'
       path: '/api/public/hooks/notifications-tick'
       fullPath: '/api/public/hooks/notifications-tick'
       preLoaderRoute: typeof ApiPublicHooksNotificationsTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/mercadopago-webhook': {
+      id: '/api/public/hooks/mercadopago-webhook'
+      path: '/api/public/hooks/mercadopago-webhook'
+      fullPath: '/api/public/hooks/mercadopago-webhook'
+      preLoaderRoute: typeof ApiPublicHooksMercadopagoWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -294,19 +294,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicHooksMercadopagoWebhookRoute: ApiPublicHooksMercadopagoWebhookRoute,
   ApiPublicHooksNotificationsTickRoute: ApiPublicHooksNotificationsTickRoute,
-  ApiPublicHooksStripeWebhookRoute: ApiPublicHooksStripeWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
