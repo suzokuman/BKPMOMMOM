@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, Beef, Flame, Pill, BarChart3 } from "lucide-react";
+import { Home, Beef, Flame, Pill, Settings } from "lucide-react";
 import type { ReactNode } from "react";
 
 const tabs = [
@@ -7,7 +7,7 @@ const tabs = [
   { to: "/protein", label: "Proteína", icon: Beef },
   { to: "/calories", label: "Calorias", icon: Flame },
   { to: "/medications", label: "Meds", icon: Pill },
-  { to: "/history", label: "Histórico", icon: BarChart3 },
+  { to: "/settings", label: "Ajustes", icon: Settings },
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {
