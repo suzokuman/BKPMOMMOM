@@ -68,10 +68,10 @@ function AuthPage() {
           {mode === "login" ? "ENTRAR" : "CRIAR CONTA"}
         </span>
         <h1 className="font-display text-5xl leading-none uppercase tracking-tight mt-1">
-          PULSE<span className="text-primary">.</span>
+          MONMON<span className="text-primary">.</span>
         </h1>
         <p className="text-sm text-muted mt-3">
-          Metas diárias. Proteína, calorias, medicação.
+          Metas diárias. Proteína, calorias, medicação. 7 dias grátis.
         </p>
       </div>
 
