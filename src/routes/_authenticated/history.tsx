@@ -1,149 +1,157 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { toast } from "sonner";
 import { format, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
-import { AppShell } from "@/components/AppShell";
+import { AppShell, PageHeader } from "@/components/AppShell";
 import { todayStr } from "@/lib/date";
 
 export const Route = createFileRoute("/_authenticated/history")({
   component: HistoryPage,
 });
 
+type ReportPayload = {
+  kcal?: number;
+  kcal_target?: number;
+  protein?: number;
+  protein_target?: number;
+  carbs?: number;
+  fat?: number;
+  fiber?: number;
+  meds_taken?: number;
+  meds_total?: number;
+  weight_kg?: number | null;
+};
+
 function HistoryPage() {
   const { user } = useAuth();
-  const from = todayStr(subDays(new Date(), 13));
+  const qc = useQueryClient();
+  const [savingEmail, setSavingEmail] = useState(false);
 
   const q = useQuery({
-    queryKey: ["history", user!.id, from],
+    queryKey: ["history", user!.id],
     queryFn: async () => {
-      const [pg, pi, cg, ci, meds] = await Promise.all([
-        supabase.from("daily_protein_goals").select("*").gte("date", from),
-        supabase.from("protein_items").select("*").gte("date", from).eq("checked", true),
-        supabase.from("daily_calorie_goals").select("*").gte("date", from),
-        supabase.from("calorie_items").select("*").gte("date", from).eq("checked", true),
-        supabase.from("medications").select("*").gte("scheduled_at", `${from}T00:00:00`),
+      const from = todayStr(subDays(new Date(), 29));
+      const [reports, settings] = await Promise.all([
+        supabase.from("daily_reports").select("*").gte("report_date", from).order("report_date", { ascending: false }),
+        supabase.from("notification_settings").select("daily_report_email, report_email").eq("user_id", user!.id).maybeSingle(),
       ]);
-      return {
-        proteinGoals: pg.data ?? [],
-        proteinItems: pi.data ?? [],
-        calorieGoals: cg.data ?? [],
-        calorieItems: ci.data ?? [],
-        meds: meds.data ?? [],
-      };
+      return { reports: reports.data ?? [], settings: settings.data };
     },
   });
 
-  const days = Array.from({ length: 14 }, (_, i) => todayStr(subDays(new Date(), 13 - i)));
+  const [email, setEmail] = useState("");
+  const [autoSend, setAutoSend] = useState(false);
 
-  function summary(d: string) {
-    const pgT = Number(q.data?.proteinGoals.find((g) => g.date === d)?.target_g ?? 0);
-    const pSum = (q.data?.proteinItems ?? [])
-      .filter((i) => i.date === d)
-      .reduce((s, i) => s + Number(i.grams), 0);
-    const cgT = Number(q.data?.calorieGoals.find((g) => g.date === d)?.target_kcal ?? 0);
-    const cSum = (q.data?.calorieItems ?? [])
-      .filter((i) => i.date === d)
-      .reduce((s, i) => s + Number(i.kcal), 0);
-    const dayMeds = (q.data?.meds ?? []).filter((m) =>
-      m.scheduled_at.startsWith(d),
-    );
-    const medsTaken = dayMeds.filter((m) => m.taken).length;
-    return { pgT, pSum, cgT, cSum, medsTaken, medsTotal: dayMeds.length };
-  }
+  // sync from settings once loaded
+  useState(() => {
+    if (q.data?.settings) {
+      setEmail(q.data.settings.report_email ?? user?.email ?? "");
+      setAutoSend(q.data.settings.daily_report_email);
+    }
+  });
+
+  const saveEmail = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("notification_settings")
+        .update({ daily_report_email: autoSend, report_email: email || null })
+        .eq("user_id", user!.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["history"] });
+      toast.success("Salvo");
+    },
+    onError: (e) => toast.error(e.message),
+  });
 
   return (
     <AppShell>
-      <header className="p-6 animate-slide-up">
-        <span className="font-mono text-[10px] tracking-widest text-muted uppercase">14 dias</span>
-        <h1 className="font-display text-4xl leading-none uppercase tracking-tight mt-1">
-          HISTÓRICO
-        </h1>
-      </header>
+      <PageHeader kicker="Relatórios" title="HISTÓRICO" />
 
-      <section className="px-6 space-y-6 animate-slide-up [animation-delay:100ms]">
-        {/* Protein bar chart */}
-        <Card title="Proteína" unit="g">
-          <BarChart
-            data={days.map((d) => {
-              const s = summary(d);
-              return { day: d, value: s.pSum, target: s.pgT };
-            })}
+      <section className="px-6 animate-slide-up [animation-delay:50ms]">
+        <div className="bg-surface ring-1 ring-border p-4 space-y-3">
+          <h2 className="font-mono text-[10px] uppercase tracking-widest text-muted">Envio por email</h2>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="seu@email.com"
+            className="w-full bg-background ring-1 ring-border px-3 py-2 text-sm focus:outline-none focus:ring-primary"
           />
-        </Card>
+          <label className="flex justify-between items-center">
+            <span className="text-sm">Enviar relatório diário às 00:00</span>
+            <input
+              type="checkbox"
+              checked={autoSend}
+              onChange={(e) => setAutoSend(e.target.checked)}
+              className="size-5 accent-primary"
+            />
+          </label>
+          <button
+            onClick={() => {
+              setSavingEmail(true);
+              saveEmail.mutate(undefined, { onSettled: () => setSavingEmail(false) });
+            }}
+            disabled={savingEmail}
+            className="w-full bg-primary text-primary-foreground py-2 font-display uppercase tracking-widest text-sm disabled:opacity-50"
+          >
+            Salvar
+          </button>
+        </div>
+      </section>
 
-        <Card title="Calorias" unit="kcal">
-          <BarChart
-            data={days.map((d) => {
-              const s = summary(d);
-              return { day: d, value: s.cSum, target: s.cgT };
-            })}
-          />
-        </Card>
-
-        <Card title="Medicação" unit="doses">
-          <div className="space-y-1.5 mt-3">
-            {days.slice().reverse().map((d) => {
-              const s = summary(d);
-              const pct = s.medsTotal ? (s.medsTaken / s.medsTotal) * 100 : 0;
-              return (
-                <div key={d} className="flex items-center gap-3">
-                  <span className="font-mono text-[10px] text-muted w-16">
-                    {format(new Date(d + "T12:00"), "dd MMM", { locale: ptBR })}
+      <section className="px-6 mt-6 space-y-2 animate-slide-up [animation-delay:100ms]">
+        <h2 className="font-mono text-[10px] uppercase tracking-widest text-muted mb-2">
+          Últimos 30 dias
+        </h2>
+        {(q.data?.reports ?? []).map((r) => {
+          const p = r.payload as ReportPayload;
+          return (
+            <div key={r.id} className="bg-surface ring-1 ring-border p-3">
+              <div className="flex justify-between items-center">
+                <p className="font-display text-base">
+                  {format(new Date(r.report_date + "T12:00"), "dd MMM yyyy", { locale: ptBR })}
+                </p>
+                {r.email_sent_at && (
+                  <span className="font-mono text-[9px] text-primary uppercase flex items-center gap-1">
+                    <Mail className="size-3" /> enviado
                   </span>
-                  <div className="flex-1 h-2 bg-border relative">
-                    <div
-                      className="absolute inset-y-0 left-0 bg-primary"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                  <span className="font-mono text-[10px] text-muted w-10 text-right">
-                    {s.medsTaken}/{s.medsTotal}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </Card>
+                )}
+              </div>
+              <div className="grid grid-cols-4 gap-2 mt-2 text-center">
+                <Mini label="Kcal" v={p.kcal} t={p.kcal_target} />
+                <Mini label="Prot" v={p.protein} t={p.protein_target} suffix="g" />
+                <Mini label="Doses" v={p.meds_taken} t={p.meds_total} />
+                <Mini label="Peso" v={p.weight_kg} suffix="kg" />
+              </div>
+            </div>
+          );
+        })}
+        {(q.data?.reports ?? []).length === 0 && (
+          <p className="text-center text-xs text-muted font-mono uppercase py-6">
+            Os relatórios são gerados automaticamente toda meia-noite.
+          </p>
+        )}
       </section>
     </AppShell>
   );
 }
 
-function Card({ title, unit, children }: { title: string; unit: string; children: React.ReactNode }) {
+function Mini({ label, v, t, suffix }: { label: string; v?: number | null; t?: number; suffix?: string }) {
   return (
-    <div className="bg-surface ring-1 ring-border p-5">
-      <div className="flex justify-between items-baseline">
-        <h2 className="font-display text-xl uppercase tracking-tight">{title}</h2>
-        <span className="font-mono text-[10px] text-muted uppercase tracking-widest">{unit}</span>
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function BarChart({ data }: { data: { day: string; value: number; target: number }[] }) {
-  const max = Math.max(1, ...data.map((d) => Math.max(d.value, d.target)));
-  return (
-    <div className="mt-4 flex items-end justify-between h-24 gap-1">
-      {data.map((d) => {
-        const h = (d.value / max) * 100;
-        const hit = d.target && d.value >= d.target;
-        return (
-          <div key={d.day} className="flex-1 flex flex-col items-center gap-1">
-            <div className="w-full h-20 flex items-end">
-              <div
-                className={`w-full transition-all ${hit ? "bg-primary" : "bg-muted/40"}`}
-                style={{ height: `${h}%`, minHeight: d.value > 0 ? "2px" : "0" }}
-              />
-            </div>
-            <span className="font-mono text-[8px] text-muted">
-              {format(new Date(d.day + "T12:00"), "dd")}
-            </span>
-          </div>
-        );
-      })}
+    <div>
+      <p className="font-mono text-[9px] uppercase text-muted">{label}</p>
+      <p className="font-display text-base">
+        {v != null ? Math.round(v) : "—"}
+        {t != null && <span className="text-[10px] text-muted">/{Math.round(t)}</span>}
+        {suffix && v != null && <span className="text-[10px] text-muted">{suffix}</span>}
+      </p>
     </div>
   );
 }

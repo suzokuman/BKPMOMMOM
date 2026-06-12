@@ -1,76 +1,70 @@
-## Visão geral
 
-Esse é um pacote grande. Vou dividir em 5 entregas dentro deste turno, na ordem em que precisam acontecer.
+# Plano — Refatoração ampla do MONMON
 
----
-
-## 1. Rebrand PULSE → MonMon
-
-- Renomear em `auth.tsx`, `__root.tsx` (title/OG/meta), AppShell, README, toasts e qualquer string visível.
-- Cores e fonte mantidos (Athletic precision escuro).
-- Gerar um ícone `MonMon` (lime sobre preto) em 512×512 e 192×192 + apple-touch-icon 180×180 + favicon, em `public/`.
-
-## 2. PWA instalável
-
-- Criar `public/manifest.webmanifest` com `name: "MonMon"`, `short_name: "MonMon"`, `display: standalone`, `theme_color: #0A0A0A`, `background_color: #0A0A0A`, ícones gerados acima, `start_url: "/app"`.
-- Adicionar `<link rel="manifest">`, `apple-touch-icon`, `apple-mobile-web-app-capable` no `__root.tsx`.
-- Sem service worker de offline-cache (perigoso no preview do Lovable). Só o SW de push (item 3), que é seguro e específico.
-
-## 3. Web Push (VAPID + cron)
-
-Backend:
-- Nova tabela `push_subscriptions(user_id, endpoint unique, p256dh, auth, user_agent, created_at)` com RLS própria.
-- Nova tabela `notification_settings(user_id PK, protein_reminder_times text[], summary_morning_time time, summary_night_time time, enabled bool)` — usuário define os horários no app.
-- Secrets: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (gero localmente e adiciono via add_secret).
-- `VITE_VAPID_PUBLIC_KEY` exposto para o cliente assinar.
-
-Service worker (`public/sw-push.js`):
-- Só ouve `push` + `notificationclick`. Sem cache, sem `fetch` handler. Registrado só fora do iframe de preview e em produção.
-
-Cliente:
-- Tela em `/settings` (nova): toggle de notificações, horários de proteína (chips), horários de resumo manhã/noite, botão para registrar/desregistrar subscription.
-- Helpers em `src/lib/push.ts` para `Notification.requestPermission()` + `pushManager.subscribe()` → salva no banco.
-
-Envio (server):
-- Biblioteca compatível com Cloudflare Workers: `@block65/webcrypto-web-push` (o `web-push` clássico usa APIs Node que quebram no Worker).
-- Server route `POST /api/public/hooks/notifications-tick` (chamado a cada 5 min por pg_cron com `apikey`):
-  - Para cada usuário ativo: verifica medicações em janela ±5 min não tomadas → envia push.
-  - Verifica horários fixos de proteína / resumos.
-  - Verifica metas: se calorias/proteína ≥ 90% e ainda não notificado → "Faltou pouco" / "Meta batida".
-- Tabela `notification_log(user_id, kind, ref_id, sent_at)` para evitar duplicar.
-- pg_cron `*/5 * * * *` aponta para a URL `project--{id}.lovable.app`.
-
-## 4. Capacitor (Android + iOS)
-
-- Adicionar `@capacitor/core`, `@capacitor/cli`, `@capacitor/android`, `@capacitor/ios`.
-- Criar `capacitor.config.ts` com `appId: "app.monmon"`, `appName: "MonMon"`, `webDir: "dist"`, `server.url` apontando para o preview do Lovable (modo hot-reload no celular) com instruções no README.
-- README com passo-a-passo: `bun run build`, `npx cap add android`, `npx cap sync`, abrir Android Studio / Xcode.
-- Push nativo (FCM/APNs) **não** entra agora — exige conta dev. Comentado no README.
-
-## 5. Assinatura Stripe R$14,99/ano + 7 dias grátis
-
-- Rodar `recommend_payment_provider` → enable Stripe Payments (built-in, sem conta).
-- Criar produto "MonMon Premium" R$14,99/ano com 7 dias de trial.
-- Tabela `subscriptions(user_id, status, current_period_end, trial_end, stripe_*)`.
-- Webhook Stripe atualiza a tabela.
-- Gate: depois do trial, telas principais redirecionam para `/billing` se `status` não estiver em (`trialing`, `active`).
-- Tela `/billing` com botão "Assinar" → checkout, e mostrar dias restantes do trial.
+Este é um trabalho grande. Vou dividir em **7 blocos**. Antes de começar, preciso confirmar algumas coisas para não desperdiçar tempo.
 
 ---
 
-## Detalhes técnicos
+## ⚠️ Confirmações necessárias
 
-- VAPID: gero o par com `npx web-push generate-vapid-keys` no sandbox e gravo via `add_secret`. Cliente recebe só a public via `VITE_VAPID_PUBLIC_KEY`.
-- Service worker de push registra-se em `/sw-push.js` com escopo `/`. Não fazer `clients.claim()` agressivo.
-- `notification_log` indexada por `(user_id, kind, ref_id)` para idempotência.
-- Cron a cada 5 min é suficiente — agendamentos por minuto exato têm tolerância de 5 min na UI.
-- Stripe trial: passo o `trial_period_days: 7` no preço/checkout; webhook sincroniza `trial_end`.
-- Capacitor não muda o build web; só adiciona configuração e dependências.
+1. **Assinatura Mercado Pago** — hoje existe **1 plano** (R$ 9,90/ano) já cadastrado no MP (`c28cb...`). Você agora pediu **3 planos**: R$ 9,90 / 3 meses, R$ 25 / 6 meses, R$ 40 / 12 meses. Precisarei que você **crie os 3 planos no painel do Mercado Pago** e me envie os 3 `preapproval_plan_id`. O plano antigo de R$ 9,90/ano deve ser desativado?
 
-## O que vou precisar de você no caminho
+2. **Envio de email do relatório diário** — não há provedor de email configurado ainda. Sugiro usar **Resend** (você cria conta gratuita, me passa a API key). Tudo bem?
 
-1. Aprovar a migration do banco (push_subscriptions, notification_settings, notification_log, subscriptions).
-2. Confirmar quando eu pedir para criar o produto no Stripe.
-3. Depois, rodar localmente `npx cap add android` / `ios` na sua máquina — eu deixo tudo configurado.
+3. **Reset diário às 00:00** — em qual **fuso horário**? Vou assumir **America/Sao_Paulo (UTC-3)** salvo indicação contrária.
 
-Posso seguir?
+4. **Fotos do diário semanal** — vou ativar **Storage privado** (bucket `diary-photos`, só o dono acessa). Ok?
+
+---
+
+## Bloco 1 — Correções de bugs urgentes
+- **Itens sumindo ao trocar meta**: a tela atual filtra refeições/proteína por `date = hoje`. Vou mudar o modelo para itens **persistentes** (template) + **checks diários** numa tabela separada. Trocar a meta nunca apagará itens.
+- **Reset diário 00:00**: cria-se uma linha `daily_checks` por dia; o "consumido" lê só dos checks daquele dia. Nada é deletado — o dia novo começa zerado naturalmente.
+
+## Bloco 2 — Nova arquitetura de Dieta
+- Tela **META** separada: kcal, carbo, gordura, proteína, fibra (alvo único, editável).
+- Tela **MINHA DIETA**: o usuário cria **refeições compostas** (ex.: "Jantar 20:00") e dentro adiciona alimentos (nome, qtd, kcal, carbo, gord, fibra, prot).
+- Cada refeição vira um item do checklist diário com horário de alerta.
+- Total do dia = soma dos alimentos das refeições marcadas.
+- Alerta "🔥 meta batida" quando atinge cada macro.
+
+## Bloco 3 — Medicação recorrente
+- Form: nome, dose, **hora inicial**, **frequência** (diário, semanal, 4/4h, 6/6h, 8/8h, 10/10h, 12/12h, 14/14h, 16/16h, 18/18h, 20/20h, 22/22h) **ou** data/hora personalizada.
+- Sistema gera automaticamente os horários do dia (ex.: Vitamina 12:00 + 18:00 + 00:00 + 06:00 para 6/6h).
+- Itens fixos — só somem se o usuário remover o template. Os checks de "tomado" resetam a cada dia.
+
+## Bloco 4 — Diário Semanal
+- Nova tela `/diary`: entrada semanal com peso, circunferência abdominal, coxa, braço, IMC (auto-calculado se altura cadastrada), notas.
+- Até 2 fotos por semana (upload para Storage privado).
+- Editável (corrigir erros).
+- Lista histórica das semanas.
+
+## Bloco 5 — Calculadoras
+- **Calculadora de IMC**: altura + peso → IMC + classificação.
+- **Calculadora de dose por seringa**: entradas = concentração (mg/ml), dose desejada (mg), referência opcional (ex.: "8u = 2,5 mg") → resultado em **unidades de seringa (UI)** + ml.
+
+## Bloco 6 — Assinatura (3 planos)
+- Tela `/billing`: 3 cards de plano (R$ 9,90/3m · R$ 25/6m · R$ 40/12m), todos com 7 dias grátis.
+- Tela `/subscription` (menu "Minha Assinatura"): status, dias restantes, botão **renovar antecipado** e **cancelar**. Cancelado = dias continuam contando até expirar + botão **reativar**.
+- Tela `/billing/success` de confirmação de pagamento.
+- Webhook MP já existente — adaptado para suportar os 3 planos.
+
+## Bloco 7 — Relatórios e email diário
+- Função que gera relatório de um dia (00:00–23:59): macros consumidos vs meta, medicações tomadas vs agendadas, peso da semana.
+- Tela `/history`: lista de relatórios anteriores + botão "enviar por email agora".
+- Config "envio automático diário 00:00": cron que gera relatório do dia anterior e dispara email via Resend.
+
+---
+
+## Detalhes técnicos (banco)
+- Novas tabelas: `meal_templates`, `meal_template_items`, `meal_template_checks`, `medication_templates`, `medication_doses` (gerada automaticamente), `medication_checks`, `nutrition_goals` (substitui daily_calorie_goals), `weekly_diary`, `weekly_diary_photos`, `daily_reports`.
+- Bucket Storage `diary-photos` (privado, RLS por user_id).
+- Coluna `height_cm` em `profiles`.
+- Cron pg_cron diário 03:00 UTC (= 00:00 BRT) → gera relatório + envia email.
+- Secret novo: `RESEND_API_KEY` (após confirmação).
+
+---
+
+## Pergunta antes de seguir
+
+**Confirma os 4 itens em "Confirmações necessárias" no topo?** Em especial precisarei dos **3 novos preapproval_plan_id do Mercado Pago** para finalizar o módulo de assinatura. Posso começar pelos **Blocos 1, 2, 3, 4, 5 e 7** em paralelo enquanto você cria os planos no MP, e fecho o Bloco 6 depois.

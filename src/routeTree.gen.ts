@@ -12,13 +12,17 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedToolsRouteImport } from './routes/_authenticated/tools'
+import { Route as AuthenticatedSubscriptionRouteImport } from './routes/_authenticated/subscription'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
-import { Route as AuthenticatedProteinRouteImport } from './routes/_authenticated/protein'
 import { Route as AuthenticatedMedicationsRouteImport } from './routes/_authenticated/medications'
 import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated/history'
-import { Route as AuthenticatedCaloriesRouteImport } from './routes/_authenticated/calories'
+import { Route as AuthenticatedGoalsRouteImport } from './routes/_authenticated/goals'
+import { Route as AuthenticatedDietRouteImport } from './routes/_authenticated/diet'
+import { Route as AuthenticatedDiaryRouteImport } from './routes/_authenticated/diary'
 import { Route as AuthenticatedBillingRouteImport } from './routes/_authenticated/billing'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
+import { Route as AuthenticatedBillingSuccessRouteImport } from './routes/_authenticated/billing.success'
 import { Route as ApiPublicHooksNotificationsTickRouteImport } from './routes/api/public/hooks/notifications-tick'
 import { Route as ApiPublicHooksMercadopagoWebhookRouteImport } from './routes/api/public/hooks/mercadopago-webhook'
 
@@ -36,14 +40,20 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedToolsRoute = AuthenticatedToolsRouteImport.update({
+  id: '/tools',
+  path: '/tools',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedSubscriptionRoute =
+  AuthenticatedSubscriptionRouteImport.update({
+    id: '/subscription',
+    path: '/subscription',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
-const AuthenticatedProteinRoute = AuthenticatedProteinRouteImport.update({
-  id: '/protein',
-  path: '/protein',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedMedicationsRoute =
@@ -57,9 +67,19 @@ const AuthenticatedHistoryRoute = AuthenticatedHistoryRouteImport.update({
   path: '/history',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedCaloriesRoute = AuthenticatedCaloriesRouteImport.update({
-  id: '/calories',
-  path: '/calories',
+const AuthenticatedGoalsRoute = AuthenticatedGoalsRouteImport.update({
+  id: '/goals',
+  path: '/goals',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedDietRoute = AuthenticatedDietRouteImport.update({
+  id: '/diet',
+  path: '/diet',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedDiaryRoute = AuthenticatedDiaryRouteImport.update({
+  id: '/diary',
+  path: '/diary',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedBillingRoute = AuthenticatedBillingRouteImport.update({
@@ -72,6 +92,12 @@ const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
   path: '/app',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedBillingSuccessRoute =
+  AuthenticatedBillingSuccessRouteImport.update({
+    id: '/success',
+    path: '/success',
+    getParentRoute: () => AuthenticatedBillingRoute,
+  } as any)
 const ApiPublicHooksNotificationsTickRoute =
   ApiPublicHooksNotificationsTickRouteImport.update({
     id: '/api/public/hooks/notifications-tick',
@@ -89,12 +115,16 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/app': typeof AuthenticatedAppRoute
-  '/billing': typeof AuthenticatedBillingRoute
-  '/calories': typeof AuthenticatedCaloriesRoute
+  '/billing': typeof AuthenticatedBillingRouteWithChildren
+  '/diary': typeof AuthenticatedDiaryRoute
+  '/diet': typeof AuthenticatedDietRoute
+  '/goals': typeof AuthenticatedGoalsRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/medications': typeof AuthenticatedMedicationsRoute
-  '/protein': typeof AuthenticatedProteinRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/subscription': typeof AuthenticatedSubscriptionRoute
+  '/tools': typeof AuthenticatedToolsRoute
+  '/billing/success': typeof AuthenticatedBillingSuccessRoute
   '/api/public/hooks/mercadopago-webhook': typeof ApiPublicHooksMercadopagoWebhookRoute
   '/api/public/hooks/notifications-tick': typeof ApiPublicHooksNotificationsTickRoute
 }
@@ -102,12 +132,16 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/app': typeof AuthenticatedAppRoute
-  '/billing': typeof AuthenticatedBillingRoute
-  '/calories': typeof AuthenticatedCaloriesRoute
+  '/billing': typeof AuthenticatedBillingRouteWithChildren
+  '/diary': typeof AuthenticatedDiaryRoute
+  '/diet': typeof AuthenticatedDietRoute
+  '/goals': typeof AuthenticatedGoalsRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/medications': typeof AuthenticatedMedicationsRoute
-  '/protein': typeof AuthenticatedProteinRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/subscription': typeof AuthenticatedSubscriptionRoute
+  '/tools': typeof AuthenticatedToolsRoute
+  '/billing/success': typeof AuthenticatedBillingSuccessRoute
   '/api/public/hooks/mercadopago-webhook': typeof ApiPublicHooksMercadopagoWebhookRoute
   '/api/public/hooks/notifications-tick': typeof ApiPublicHooksNotificationsTickRoute
 }
@@ -117,12 +151,16 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/app': typeof AuthenticatedAppRoute
-  '/_authenticated/billing': typeof AuthenticatedBillingRoute
-  '/_authenticated/calories': typeof AuthenticatedCaloriesRoute
+  '/_authenticated/billing': typeof AuthenticatedBillingRouteWithChildren
+  '/_authenticated/diary': typeof AuthenticatedDiaryRoute
+  '/_authenticated/diet': typeof AuthenticatedDietRoute
+  '/_authenticated/goals': typeof AuthenticatedGoalsRoute
   '/_authenticated/history': typeof AuthenticatedHistoryRoute
   '/_authenticated/medications': typeof AuthenticatedMedicationsRoute
-  '/_authenticated/protein': typeof AuthenticatedProteinRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/subscription': typeof AuthenticatedSubscriptionRoute
+  '/_authenticated/tools': typeof AuthenticatedToolsRoute
+  '/_authenticated/billing/success': typeof AuthenticatedBillingSuccessRoute
   '/api/public/hooks/mercadopago-webhook': typeof ApiPublicHooksMercadopagoWebhookRoute
   '/api/public/hooks/notifications-tick': typeof ApiPublicHooksNotificationsTickRoute
 }
@@ -133,11 +171,15 @@ export interface FileRouteTypes {
     | '/auth'
     | '/app'
     | '/billing'
-    | '/calories'
+    | '/diary'
+    | '/diet'
+    | '/goals'
     | '/history'
     | '/medications'
-    | '/protein'
     | '/settings'
+    | '/subscription'
+    | '/tools'
+    | '/billing/success'
     | '/api/public/hooks/mercadopago-webhook'
     | '/api/public/hooks/notifications-tick'
   fileRoutesByTo: FileRoutesByTo
@@ -146,11 +188,15 @@ export interface FileRouteTypes {
     | '/auth'
     | '/app'
     | '/billing'
-    | '/calories'
+    | '/diary'
+    | '/diet'
+    | '/goals'
     | '/history'
     | '/medications'
-    | '/protein'
     | '/settings'
+    | '/subscription'
+    | '/tools'
+    | '/billing/success'
     | '/api/public/hooks/mercadopago-webhook'
     | '/api/public/hooks/notifications-tick'
   id:
@@ -160,11 +206,15 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/app'
     | '/_authenticated/billing'
-    | '/_authenticated/calories'
+    | '/_authenticated/diary'
+    | '/_authenticated/diet'
+    | '/_authenticated/goals'
     | '/_authenticated/history'
     | '/_authenticated/medications'
-    | '/_authenticated/protein'
     | '/_authenticated/settings'
+    | '/_authenticated/subscription'
+    | '/_authenticated/tools'
+    | '/_authenticated/billing/success'
     | '/api/public/hooks/mercadopago-webhook'
     | '/api/public/hooks/notifications-tick'
   fileRoutesById: FileRoutesById
@@ -200,18 +250,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/tools': {
+      id: '/_authenticated/tools'
+      path: '/tools'
+      fullPath: '/tools'
+      preLoaderRoute: typeof AuthenticatedToolsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/subscription': {
+      id: '/_authenticated/subscription'
+      path: '/subscription'
+      fullPath: '/subscription'
+      preLoaderRoute: typeof AuthenticatedSubscriptionRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/settings': {
       id: '/_authenticated/settings'
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/protein': {
-      id: '/_authenticated/protein'
-      path: '/protein'
-      fullPath: '/protein'
-      preLoaderRoute: typeof AuthenticatedProteinRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/medications': {
@@ -228,11 +285,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHistoryRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/calories': {
-      id: '/_authenticated/calories'
-      path: '/calories'
-      fullPath: '/calories'
-      preLoaderRoute: typeof AuthenticatedCaloriesRouteImport
+    '/_authenticated/goals': {
+      id: '/_authenticated/goals'
+      path: '/goals'
+      fullPath: '/goals'
+      preLoaderRoute: typeof AuthenticatedGoalsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/diet': {
+      id: '/_authenticated/diet'
+      path: '/diet'
+      fullPath: '/diet'
+      preLoaderRoute: typeof AuthenticatedDietRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/diary': {
+      id: '/_authenticated/diary'
+      path: '/diary'
+      fullPath: '/diary'
+      preLoaderRoute: typeof AuthenticatedDiaryRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/billing': {
@@ -248,6 +319,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app'
       preLoaderRoute: typeof AuthenticatedAppRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/billing/success': {
+      id: '/_authenticated/billing/success'
+      path: '/success'
+      fullPath: '/billing/success'
+      preLoaderRoute: typeof AuthenticatedBillingSuccessRouteImport
+      parentRoute: typeof AuthenticatedBillingRoute
     }
     '/api/public/hooks/notifications-tick': {
       id: '/api/public/hooks/notifications-tick'
@@ -266,24 +344,41 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedBillingRouteChildren {
+  AuthenticatedBillingSuccessRoute: typeof AuthenticatedBillingSuccessRoute
+}
+
+const AuthenticatedBillingRouteChildren: AuthenticatedBillingRouteChildren = {
+  AuthenticatedBillingSuccessRoute: AuthenticatedBillingSuccessRoute,
+}
+
+const AuthenticatedBillingRouteWithChildren =
+  AuthenticatedBillingRoute._addFileChildren(AuthenticatedBillingRouteChildren)
+
 interface AuthenticatedRouteChildren {
   AuthenticatedAppRoute: typeof AuthenticatedAppRoute
-  AuthenticatedBillingRoute: typeof AuthenticatedBillingRoute
-  AuthenticatedCaloriesRoute: typeof AuthenticatedCaloriesRoute
+  AuthenticatedBillingRoute: typeof AuthenticatedBillingRouteWithChildren
+  AuthenticatedDiaryRoute: typeof AuthenticatedDiaryRoute
+  AuthenticatedDietRoute: typeof AuthenticatedDietRoute
+  AuthenticatedGoalsRoute: typeof AuthenticatedGoalsRoute
   AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
   AuthenticatedMedicationsRoute: typeof AuthenticatedMedicationsRoute
-  AuthenticatedProteinRoute: typeof AuthenticatedProteinRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedSubscriptionRoute: typeof AuthenticatedSubscriptionRoute
+  AuthenticatedToolsRoute: typeof AuthenticatedToolsRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAppRoute: AuthenticatedAppRoute,
-  AuthenticatedBillingRoute: AuthenticatedBillingRoute,
-  AuthenticatedCaloriesRoute: AuthenticatedCaloriesRoute,
+  AuthenticatedBillingRoute: AuthenticatedBillingRouteWithChildren,
+  AuthenticatedDiaryRoute: AuthenticatedDiaryRoute,
+  AuthenticatedDietRoute: AuthenticatedDietRoute,
+  AuthenticatedGoalsRoute: AuthenticatedGoalsRoute,
   AuthenticatedHistoryRoute: AuthenticatedHistoryRoute,
   AuthenticatedMedicationsRoute: AuthenticatedMedicationsRoute,
-  AuthenticatedProteinRoute: AuthenticatedProteinRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedSubscriptionRoute: AuthenticatedSubscriptionRoute,
+  AuthenticatedToolsRoute: AuthenticatedToolsRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
@@ -300,13 +395,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
