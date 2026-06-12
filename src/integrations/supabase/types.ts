@@ -350,6 +350,57 @@ export type Database = {
         }
         Relationships: []
       }
+      purchases: {
+        Row: {
+          amount_brl: number
+          created_at: string
+          days_granted: number
+          id: string
+          mp_external_reference: string | null
+          mp_payment_id: string | null
+          mp_preference_id: string | null
+          paid_at: string | null
+          period_end: string | null
+          period_start: string | null
+          raw: Json | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_brl: number
+          created_at?: string
+          days_granted: number
+          id?: string
+          mp_external_reference?: string | null
+          mp_payment_id?: string | null
+          mp_preference_id?: string | null
+          paid_at?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          raw?: Json | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_brl?: number
+          created_at?: string
+          days_granted?: number
+          id?: string
+          mp_external_reference?: string | null
+          mp_payment_id?: string | null
+          mp_preference_id?: string | null
+          paid_at?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          raw?: Json | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       push_subscriptions: {
         Row: {
           auth: string

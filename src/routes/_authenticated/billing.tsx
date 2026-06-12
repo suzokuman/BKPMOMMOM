@@ -4,7 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { AppShell, PageHeader } from "@/components/AppShell";
 import { createMpCheckoutLink } from "@/lib/mercadopago.functions";
-import { PLANS, type PlanKey } from "@/lib/plans";
+import { PURCHASE } from "@/lib/plans";
 
 export const Route = createFileRoute("/_authenticated/billing")({
   component: BillingPage,
@@ -12,61 +12,50 @@ export const Route = createFileRoute("/_authenticated/billing")({
 
 function BillingPage() {
   const checkout = useServerFn(createMpCheckoutLink);
-  const [busy, setBusy] = useState<PlanKey | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  async function go(plan: PlanKey) {
-    setBusy(plan);
+  async function go() {
+    setBusy(true);
     try {
-      const r = await checkout({ data: { plan } });
+      const r = await checkout({});
       window.location.href = r.url;
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Falha ao iniciar checkout");
-      setBusy(null);
+      setBusy(false);
     }
   }
 
   return (
     <AppShell>
-      <PageHeader kicker="Planos" title="MONMON PREMIUM" />
+      <PageHeader kicker="Comprar acesso" title="MONMON 90 DIAS" />
 
-      <section className="px-6 space-y-3 animate-slide-up [animation-delay:100ms]">
-        <p className="text-center text-xs font-mono uppercase text-muted tracking-widest mb-3">
-          7 dias grátis em todos
-        </p>
+      <section className="px-6 space-y-4 animate-slide-up [animation-delay:100ms]">
+        <div className="bg-primary text-primary-foreground p-6 ring-1 ring-primary">
+          <p className="font-mono text-[10px] uppercase tracking-widest opacity-80">Pagamento único</p>
+          <p className="font-display text-6xl mt-2">
+            R$ {Math.floor(PURCHASE.amountBRL)}
+            <span className="text-3xl">,{String(PURCHASE.amountBRL).split(".")[1]?.padEnd(2, "0") ?? "00"}</span>
+          </p>
+          <p className="font-mono text-xs uppercase mt-1">{PURCHASE.days} dias de acesso completo</p>
+        </div>
 
-        {(Object.keys(PLANS) as PlanKey[]).map((key) => {
-          const p = PLANS[key];
-          const perMonth = p.priceBRL / p.months;
-          const isBest = key === "m12";
-          return (
-            <button
-              key={key}
-              onClick={() => go(key)}
-              disabled={busy !== null}
-              className={`w-full block text-left p-5 ring-1 transition disabled:opacity-50 ${
-                isBest ? "bg-primary text-primary-foreground ring-primary" : "bg-surface ring-border"
-              }`}
-            >
-              <div className="flex justify-between items-baseline">
-                <span className="font-display text-2xl uppercase">{p.label}</span>
-                {isBest && <span className="font-mono text-[9px] uppercase tracking-widest">+ econômico</span>}
-              </div>
-              <p className="font-display text-5xl mt-2">
-                R$ {Math.floor(p.priceBRL)}
-                <span className="text-2xl">,{String(p.priceBRL).split(".")[1]?.padEnd(2, "0") ?? "00"}</span>
-              </p>
-              <p className={`font-mono text-[10px] uppercase ${isBest ? "" : "text-muted"}`}>
-                ≈ R$ {perMonth.toFixed(2)}/mês
-              </p>
-              <p className={`mt-3 font-mono text-[10px] uppercase tracking-widest ${isBest ? "" : "text-primary"}`}>
-                {busy === key ? "abrindo checkout..." : "assinar →"}
-              </p>
-            </button>
-          );
-        })}
+        <ul className="text-sm space-y-2 px-1">
+          <li>✓ Sem assinatura recorrente</li>
+          <li>✓ Sem renovação automática</li>
+          <li>✓ Acesso liberado na hora após o pagamento</li>
+          <li>✓ Compre novamente quando quiser para estender</li>
+        </ul>
 
-        <p className="text-[10px] text-muted text-center font-mono mt-4">
-          Pagamento via Mercado Pago
+        <button
+          onClick={go}
+          disabled={busy}
+          className="w-full bg-primary text-primary-foreground font-display py-4 uppercase tracking-widest text-lg disabled:opacity-50"
+        >
+          {busy ? "abrindo checkout..." : "comprar agora →"}
+        </button>
+
+        <p className="text-[10px] text-muted text-center font-mono">
+          Pagamento via Mercado Pago · Pix, cartão ou boleto
         </p>
 
         <Link to="/subscription" className="block text-center mt-4 text-xs font-mono uppercase text-muted">
