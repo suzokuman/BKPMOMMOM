@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Bell, BellOff, X, Plus, BarChart3, LogOut, CreditCard } from "lucide-react";
+import { Bell, BellOff, BarChart3, LogOut, CreditCard, Target } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { AppShell, PageHeader } from "@/components/AppShell";
@@ -17,23 +17,23 @@ function SettingsPage() {
   const qc = useQueryClient();
   const [pushOn, setPushOn] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [height, setHeight] = useState("");
 
   useEffect(() => {
     getPushSubscription().then((s) => setPushOn(!!s));
   }, []);
 
-  const settings = useQuery({
-    queryKey: ["notif-settings", user!.id],
+  const profile = useQuery({
+    queryKey: ["profile", user!.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("notification_settings")
-        .select("*")
-        .eq("user_id", user!.id)
-        .maybeSingle();
-      if (error) throw error;
+      const { data } = await supabase.from("profiles").select("*").eq("id", user!.id).maybeSingle();
       return data;
     },
   });
+
+  useEffect(() => {
+    if (profile.data?.height_cm != null) setHeight(String(profile.data.height_cm));
+  }, [profile.data]);
 
   const sub = useQuery({
     queryKey: ["subscription", user!.id],
@@ -47,17 +47,17 @@ function SettingsPage() {
     },
   });
 
-  const save = useMutation({
-    mutationFn: async (patch: Record<string, unknown>) => {
+  const saveHeight = useMutation({
+    mutationFn: async () => {
       const { error } = await supabase
-        .from("notification_settings")
-        .update({ ...patch, updated_at: new Date().toISOString() })
-        .eq("user_id", user!.id);
+        .from("profiles")
+        .update({ height_cm: height ? Number(height) : null })
+        .eq("id", user!.id);
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["notif-settings"] });
-      toast.success("Salvo");
+      qc.invalidateQueries({ queryKey: ["profile"] });
+      toast.success("Altura salva");
     },
     onError: (e) => toast.error(e.message),
   });
@@ -83,30 +83,46 @@ function SettingsPage() {
     }
   }
 
-  const s = settings.data;
   const trialEnd = sub.data?.trial_end ? new Date(sub.data.trial_end) : null;
-  const trialDays = trialEnd ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / 86400000)) : 0;
+  const periodEnd = sub.data?.current_period_end ? new Date(sub.data.current_period_end) : trialEnd;
+  const daysLeft = periodEnd ? Math.max(0, Math.ceil((periodEnd.getTime() - Date.now()) / 86400000)) : 0;
+  const subStatus = sub.data?.status === "active"
+    ? `Ativa · ${daysLeft}d`
+    : sub.data?.status === "trialing"
+    ? `Trial · ${daysLeft}d`
+    : "Inativa";
 
   return (
     <AppShell>
       <PageHeader kicker="Configuração" title="AJUSTES" />
 
       <section className="px-6 space-y-3 animate-slide-up [animation-delay:50ms]">
-        <Link
-          to="/billing"
-          className="bg-surface ring-1 ring-border p-4 flex justify-between items-center"
-        >
+        <Link to="/subscription" className="bg-surface ring-1 ring-border p-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <CreditCard className="size-4 text-primary" />
             <div>
-              <p className="text-sm font-bold">Assinatura</p>
-              <p className="text-[10px] font-mono uppercase text-muted">
-                {sub.data?.status === "active"
-                  ? "Ativa"
-                  : sub.data?.status === "trialing"
-                  ? `Trial · ${trialDays} dia${trialDays === 1 ? "" : "s"}`
-                  : "Inativa"}
-              </p>
+              <p className="text-sm font-bold">Minha assinatura</p>
+              <p className="text-[10px] font-mono uppercase text-muted">{subStatus}</p>
+            </div>
+          </div>
+          <span className="text-xs text-muted">→</span>
+        </Link>
+        <Link to="/goals" className="bg-surface ring-1 ring-border p-4 flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <Target className="size-4 text-primary" />
+            <div>
+              <p className="text-sm font-bold">Metas</p>
+              <p className="text-[10px] font-mono uppercase text-muted">Calorias, macros, fibras</p>
+            </div>
+          </div>
+          <span className="text-xs text-muted">→</span>
+        </Link>
+        <Link to="/history" className="bg-surface ring-1 ring-border p-4 flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <BarChart3 className="size-4 text-primary" />
+            <div>
+              <p className="text-sm font-bold">Relatórios / Histórico</p>
+              <p className="text-[10px] font-mono uppercase text-muted">Envio por email diário</p>
             </div>
           </div>
           <span className="text-xs text-muted">→</span>
@@ -114,6 +130,23 @@ function SettingsPage() {
       </section>
 
       <section className="px-6 mt-8 animate-slide-up [animation-delay:100ms]">
+        <h2 className="font-mono text-[10px] uppercase tracking-widest text-muted mb-3">Perfil</h2>
+        <div className="bg-surface ring-1 ring-border p-4 space-y-2">
+          <label className="flex justify-between items-center gap-3">
+            <span className="text-sm">Altura (cm)</span>
+            <input
+              type="number"
+              value={height}
+              onChange={(e) => setHeight(e.target.value)}
+              onBlur={() => saveHeight.mutate()}
+              className="w-24 bg-background ring-1 ring-border px-3 py-1.5 text-sm text-right focus:outline-none focus:ring-primary"
+            />
+          </label>
+          <p className="font-mono text-[10px] text-muted">Usado para cálculo de IMC no diário.</p>
+        </div>
+      </section>
+
+      <section className="px-6 mt-8 animate-slide-up [animation-delay:150ms]">
         <h2 className="font-mono text-[10px] uppercase tracking-widest text-muted mb-3">Notificações</h2>
         <div className="bg-surface ring-1 ring-border p-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -121,7 +154,7 @@ function SettingsPage() {
             <div>
               <p className="text-sm font-bold">Push no celular/relógio</p>
               <p className="text-[10px] font-mono uppercase text-muted">
-                {pushSupported() ? (pushOn ? "Ligado" : "Desligado") : "Não suportado neste navegador"}
+                {pushSupported() ? (pushOn ? "Ligado" : "Desligado") : "Não suportado"}
               </p>
             </div>
           </div>
@@ -135,122 +168,17 @@ function SettingsPage() {
             {pushOn ? "ON" : "OFF"}
           </button>
         </div>
-        <p className="text-[10px] text-muted mt-2 font-mono">
-          Funciona instalado como app. Adicione MonMon à tela inicial.
-        </p>
       </section>
 
-      {s && (
-        <>
-          <section className="px-6 mt-8 animate-slide-up [animation-delay:150ms]">
-            <h2 className="font-mono text-[10px] uppercase tracking-widest text-muted mb-3">
-              Lembretes de proteína
-            </h2>
-            <TimesEditor
-              times={s.protein_reminder_times ?? []}
-              onChange={(t) => save.mutate({ protein_reminder_times: t })}
-            />
-          </section>
-
-          <section className="px-6 mt-8 animate-slide-up [animation-delay:200ms]">
-            <h2 className="font-mono text-[10px] uppercase tracking-widest text-muted mb-3">
-              Resumo diário
-            </h2>
-            <div className="grid grid-cols-2 gap-3">
-              <TimeField
-                label="Manhã"
-                value={s.summary_morning_time ?? ""}
-                onChange={(v) => save.mutate({ summary_morning_time: v || null })}
-              />
-              <TimeField
-                label="Noite"
-                value={s.summary_night_time ?? ""}
-                onChange={(v) => save.mutate({ summary_night_time: v || null })}
-              />
-            </div>
-          </section>
-
-          <section className="px-6 mt-8 animate-slide-up [animation-delay:250ms]">
-            <label className="bg-surface ring-1 ring-border p-4 flex justify-between items-center">
-              <span className="text-sm font-bold">Alerta perto da meta</span>
-              <input
-                type="checkbox"
-                checked={s.goal_alerts}
-                onChange={(e) => save.mutate({ goal_alerts: e.target.checked })}
-                className="size-5 accent-primary"
-              />
-            </label>
-          </section>
-        </>
-      )}
-
-      <section className="px-6 mt-10 grid grid-cols-2 gap-2 animate-slide-up [animation-delay:300ms]">
-        <Link to="/history" className="bg-surface ring-1 ring-border p-4 flex items-center gap-2">
-          <BarChart3 className="size-4 text-primary" />
-          <span className="text-xs font-mono uppercase">Histórico</span>
-        </Link>
+      <section className="px-6 mt-10 animate-slide-up [animation-delay:200ms]">
         <button
           onClick={() => supabase.auth.signOut()}
-          className="bg-surface ring-1 ring-border p-4 flex items-center gap-2"
+          className="w-full bg-surface ring-1 ring-border p-4 flex items-center justify-center gap-2"
         >
           <LogOut className="size-4 text-muted" />
           <span className="text-xs font-mono uppercase">Sair</span>
         </button>
       </section>
     </AppShell>
-  );
-}
-
-function TimeField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
-  return (
-    <label className="bg-surface ring-1 ring-border p-3 flex flex-col">
-      <span className="font-mono text-[9px] uppercase text-muted">{label}</span>
-      <input
-        type="time"
-        value={value ? value.slice(0, 5) : ""}
-        onChange={(e) => onChange(e.target.value)}
-        className="bg-transparent text-sm font-mono mt-1 focus:outline-none"
-      />
-    </label>
-  );
-}
-
-function TimesEditor({ times, onChange }: { times: string[]; onChange: (t: string[]) => void }) {
-  const [draft, setDraft] = useState("");
-  function add() {
-    if (!draft) return;
-    if (times.includes(draft)) return;
-    onChange([...times, draft].sort());
-    setDraft("");
-  }
-  function remove(t: string) {
-    onChange(times.filter((x) => x !== t));
-  }
-  return (
-    <div className="bg-surface ring-1 ring-border p-4">
-      <div className="flex flex-wrap gap-2 mb-3">
-        {times.length === 0 && <span className="text-[10px] font-mono text-muted">Nenhum horário.</span>}
-        {times.map((t) => (
-          <span key={t} className="bg-primary/10 text-primary font-mono text-xs px-2 py-1 flex items-center gap-1">
-            {t}
-            <button onClick={() => remove(t)} aria-label="remover"><X className="size-3" /></button>
-          </span>
-        ))}
-      </div>
-      <div className="flex gap-2">
-        <input
-          type="time"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          className="bg-background ring-1 ring-border px-3 py-2 text-sm font-mono flex-1 focus:outline-none focus:ring-primary"
-        />
-        <button
-          onClick={add}
-          className="bg-primary text-primary-foreground px-3 font-display uppercase tracking-widest text-sm"
-        >
-          <Plus className="size-4" />
-        </button>
-      </div>
-    </div>
   );
 }

@@ -1,122 +1,75 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/lib/auth-context";
 import { AppShell, PageHeader } from "@/components/AppShell";
-import { createMpCheckoutLink, cancelMpSubscription } from "@/lib/mercadopago.functions";
+import { createMpCheckoutLink } from "@/lib/mercadopago.functions";
+import { PLANS, type PlanKey } from "@/lib/plans";
 
 export const Route = createFileRoute("/_authenticated/billing")({
   component: BillingPage,
 });
 
 function BillingPage() {
-  const { user } = useAuth();
   const checkout = useServerFn(createMpCheckoutLink);
-  const cancelFn = useServerFn(cancelMpSubscription);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<PlanKey | null>(null);
 
-  const sub = useQuery({
-    queryKey: ["subscription", user!.id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("subscriptions")
-        .select("*")
-        .eq("user_id", user!.id)
-        .maybeSingle();
-      return data;
-    },
-  });
-
-  const trialEnd = sub.data?.trial_end ? new Date(sub.data.trial_end) : null;
-  const trialDays = trialEnd
-    ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / 86400000))
-    : 0;
-  const active = sub.data?.status === "active" || sub.data?.status === "trialing";
-
-  async function go() {
-    setBusy(true);
+  async function go(plan: PlanKey) {
+    setBusy(plan);
     try {
-      const r = await checkout({});
+      const r = await checkout({ data: { plan } });
       window.location.href = r.url;
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Falha ao iniciar checkout");
-      setBusy(false);
-    }
-  }
-
-  async function cancel() {
-    if (!confirm("Cancelar assinatura?")) return;
-    setBusy(true);
-    try {
-      await cancelFn({});
-      toast.success("Assinatura cancelada");
-      sub.refetch();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Falha ao cancelar");
-    } finally {
-      setBusy(false);
+      setBusy(null);
     }
   }
 
   return (
     <AppShell>
-      <PageHeader kicker="Plano" title="MONMON PREMIUM" />
+      <PageHeader kicker="Planos" title="MONMON PREMIUM" />
 
-      <section className="px-6 animate-slide-up [animation-delay:100ms]">
-        <div className="bg-surface ring-1 ring-border p-6">
-          <p className="font-mono text-[10px] uppercase text-muted">Plano único</p>
-          <p className="font-display text-5xl mt-1">
-            R$ 9<span className="text-2xl">,90</span>
-          </p>
-          <p className="font-mono text-[10px] uppercase text-muted">por ano</p>
-          <ul className="mt-4 space-y-1 text-sm">
-            <li>· 7 dias grátis</li>
-            <li>· Notificações no celular e smartwatch</li>
-            <li>· Histórico completo</li>
-            <li>· Cancele quando quiser</li>
-          </ul>
-          <p className="mt-3 font-mono text-[10px] uppercase text-muted">
-            Pagamento via Mercado Pago
-          </p>
-        </div>
+      <section className="px-6 space-y-3 animate-slide-up [animation-delay:100ms]">
+        <p className="text-center text-xs font-mono uppercase text-muted tracking-widest mb-3">
+          7 dias grátis em todos
+        </p>
 
-        {sub.data?.status === "trialing" && (
-          <p className="mt-4 text-sm font-mono text-primary text-center">
-            Trial · {trialDays} dia{trialDays === 1 ? "" : "s"} restantes
-          </p>
-        )}
-        {sub.data?.status === "active" && (
-          <p className="mt-4 text-sm font-mono text-primary text-center">Assinatura ativa</p>
-        )}
-        {sub.data?.status === "cancelled" && (
-          <p className="mt-4 text-sm font-mono text-muted text-center">Assinatura cancelada</p>
-        )}
+        {(Object.keys(PLANS) as PlanKey[]).map((key) => {
+          const p = PLANS[key];
+          const perMonth = p.priceBRL / p.months;
+          const isBest = key === "m12";
+          return (
+            <button
+              key={key}
+              onClick={() => go(key)}
+              disabled={busy !== null}
+              className={`w-full block text-left p-5 ring-1 transition disabled:opacity-50 ${
+                isBest ? "bg-primary text-primary-foreground ring-primary" : "bg-surface ring-border"
+              }`}
+            >
+              <div className="flex justify-between items-baseline">
+                <span className="font-display text-2xl uppercase">{p.label}</span>
+                {isBest && <span className="font-mono text-[9px] uppercase tracking-widest">+ econômico</span>}
+              </div>
+              <p className="font-display text-5xl mt-2">
+                R$ {Math.floor(p.priceBRL)}
+                <span className="text-2xl">,{String(p.priceBRL).split(".")[1]?.padEnd(2, "0") ?? "00"}</span>
+              </p>
+              <p className={`font-mono text-[10px] uppercase ${isBest ? "" : "text-muted"}`}>
+                ≈ R$ {perMonth.toFixed(2)}/mês
+              </p>
+              <p className={`mt-3 font-mono text-[10px] uppercase tracking-widest ${isBest ? "" : "text-primary"}`}>
+                {busy === key ? "abrindo checkout..." : "assinar →"}
+              </p>
+            </button>
+          );
+        })}
 
-        {active && sub.data?.mp_preapproval_id ? (
-          <button
-            onClick={cancel}
-            disabled={busy}
-            className="mt-6 w-full ring-1 ring-border py-3 font-display uppercase tracking-widest text-sm disabled:opacity-50"
-          >
-            Cancelar assinatura
-          </button>
-        ) : (
-          <button
-            onClick={go}
-            disabled={busy}
-            className="mt-6 w-full bg-primary text-primary-foreground py-3 font-display uppercase tracking-widest text-lg disabled:opacity-50"
-          >
-            {sub.data?.status === "trialing" ? "Confirmar assinatura" : "Começar 7 dias grátis"}
-          </button>
-        )}
+        <p className="text-[10px] text-muted text-center font-mono mt-4">
+          Pagamento via Mercado Pago
+        </p>
 
-        <Link
-          to="/settings"
-          className="block text-center mt-6 text-xs font-mono uppercase text-muted"
-        >
+        <Link to="/subscription" className="block text-center mt-4 text-xs font-mono uppercase text-muted">
           Voltar
         </Link>
       </section>
