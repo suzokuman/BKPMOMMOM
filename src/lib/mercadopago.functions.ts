@@ -1,75 +1,74 @@
 import { createServerFn } from "@tanstack/react-start";
-import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { PURCHASE } from "@/lib/plans";
 
-function planIdFor(key: "m3" | "m6" | "m12"): string | null {
-  if (key === "m3") return process.env.MERCADOPAGO_PLAN_3M ?? null;
-  if (key === "m6") return process.env.MERCADOPAGO_PLAN_6M ?? null;
-  return process.env.MERCADOPAGO_PLAN_12M ?? process.env.MERCADOPAGO_PREAPPROVAL_PLAN_ID ?? null;
-}
-
-const planSchema = z.object({ plan: z.enum(["m3", "m6", "m12"]) });
-
+// Creates a Mercado Pago Checkout Pro preference for a one-time R$19,90 payment.
+// Returns the init_point URL the user is redirected to.
 export const createMpCheckoutLink = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => planSchema.parse(d))
-  .handler(async ({ context, data }) => {
-    const planId = planIdFor(data.plan);
-    if (!planId) {
-      throw new Error(
-        `Plano ${data.plan} ainda não cadastrado no Mercado Pago. Crie o plano no painel MP e configure o ID.`,
-      );
-    }
-    const origin = process.env.SITE_URL || "https://diariomonmon.lovable.app";
-    const url = new URL("https://www.mercadopago.com.br/subscriptions/checkout");
-    url.searchParams.set("preapproval_plan_id", planId);
-    url.searchParams.set("external_reference", `${context.userId}|${data.plan}`);
-    url.searchParams.set("back_url", `${origin}/billing/success`);
-    return { url: url.toString() };
-  });
-
-export const cancelMpSubscription = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const token = process.env.MERCADOPAGO_ACCESS_TOKEN;
     if (!token) throw new Error("Mercado Pago não configurado.");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: sub } = await supabaseAdmin
-      .from("subscriptions")
-      .select("mp_preapproval_id")
-      .eq("user_id", context.userId)
-      .maybeSingle();
-    if (!sub?.mp_preapproval_id) {
-      // No active MP subscription — mark cancel locally so trial/period continues.
-      await supabaseAdmin
-        .from("subscriptions")
-        .update({ cancel_at_period_end: true, updated_at: new Date().toISOString() })
-        .eq("user_id", context.userId);
-      return { ok: true };
-    }
-    const res = await fetch(`https://api.mercadopago.com/preapproval/${sub.mp_preapproval_id}`, {
-      method: "PUT",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "cancelled" }),
-    });
-    if (!res.ok) throw new Error(`MP: ${(await res.text()).slice(0, 200)}`);
-    await supabaseAdmin
-      .from("subscriptions")
-      .update({
-        cancel_at_period_end: true,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("user_id", context.userId);
-    return { ok: true };
-  });
 
-export const reactivateMpSubscription = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+    const origin = process.env.SITE_URL || "https://diariomonmon.lovable.app";
+    const isTest = token.startsWith("TEST-");
+
+    const externalReference = `${context.userId}|${Date.now()}`;
+
+    const body = {
+      items: [
+        {
+          id: "monmon-90d",
+          title: PURCHASE.title,
+          description: PURCHASE.description,
+          quantity: 1,
+          currency_id: "BRL",
+          unit_price: PURCHASE.amountBRL,
+        },
+      ],
+      external_reference: externalReference,
+      notification_url: `${origin}/api/public/hooks/mercadopago-webhook`,
+      back_urls: {
+        success: `${origin}/billing/success`,
+        failure: `${origin}/billing`,
+        pending: `${origin}/billing/success`,
+      },
+      auto_return: "approved",
+      statement_descriptor: "MONMON",
+      metadata: { user_id: context.userId },
+    };
+
+    const res = await fetch("https://api.mercadopago.com/checkout/preferences", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(`MP: ${txt.slice(0, 300)}`);
+    }
+    const pref = (await res.json()) as {
+      id: string;
+      init_point: string;
+      sandbox_init_point: string;
+    };
+
+    // Record pending purchase (idempotent-ish by mp_preference_id)
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await supabaseAdmin
-      .from("subscriptions")
-      .update({ cancel_at_period_end: false, updated_at: new Date().toISOString() })
-      .eq("user_id", context.userId);
-    return { ok: true };
+    await supabaseAdmin.from("purchases").insert({
+      user_id: context.userId,
+      amount_brl: PURCHASE.amountBRL,
+      days_granted: PURCHASE.days,
+      status: "pending",
+      mp_preference_id: pref.id,
+      mp_external_reference: externalReference,
+    });
+
+    return {
+      url: isTest ? pref.sandbox_init_point : pref.init_point,
+    };
   });

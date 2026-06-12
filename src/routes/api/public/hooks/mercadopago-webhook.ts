@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-// Mercado Pago webhook — validates x-signature header per MP docs.
-// https://www.mercadopago.com.br/developers/en/docs/your-integrations/notifications/webhooks
+// Mercado Pago webhook for one-time payments.
+// Verifies x-signature header (HMAC SHA-256 with secret).
 async function verifyMpSignature(opts: {
   signatureHeader: string | null;
   requestIdHeader: string | null;
@@ -68,58 +68,108 @@ export const Route = createFileRoute("/api/public/hooks/mercadopago-webhook")({
         });
         if (!ok) return new Response("bad signature", { status: 401 });
 
-        if (!dataId) return new Response("ok"); // nothing to do
+        if (!dataId) return new Response("ok");
+        // We only care about payment events
+        if (!topic.includes("payment")) return new Response("ok");
 
         try {
-          // Both preapproval and authorized_payment events: refetch preapproval to get current status.
-          // For authorized_payment we need to resolve its preapproval_id first.
-          let preapprovalId = dataId;
-          if (topic.includes("authorized_payment")) {
-            const apRes = await fetch(`https://api.mercadopago.com/authorized_payments/${dataId}`, {
-              headers: { Authorization: `Bearer ${token}` },
-            });
-            if (apRes.ok) {
-              const ap = (await apRes.json()) as { preapproval_id?: string };
-              if (ap.preapproval_id) preapprovalId = ap.preapproval_id;
-            }
-          }
-
-          const paRes = await fetch(`https://api.mercadopago.com/preapproval/${preapprovalId}`, {
+          const payRes = await fetch(`https://api.mercadopago.com/v1/payments/${dataId}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
-          if (!paRes.ok) return new Response("preapproval fetch failed", { status: 502 });
-          const pa = (await paRes.json()) as {
-            id: string;
-            status: string; // authorized | paused | cancelled | pending
+          if (!payRes.ok) return new Response("payment fetch failed", { status: 502 });
+          const pay = (await payRes.json()) as {
+            id: number;
+            status: string; // approved | pending | rejected | cancelled | refunded
             external_reference?: string;
-            next_payment_date?: string;
-            payer_email?: string;
+            transaction_amount?: number;
+            date_approved?: string;
+            metadata?: { user_id?: string };
           };
 
-          const userId = pa.external_reference;
+          const userId =
+            pay.metadata?.user_id || (pay.external_reference?.split("|")[0] ?? null);
           if (!userId) return new Response("ok");
 
-          // Map MP status → our status
-          const status =
-            pa.status === "authorized"
-              ? "active"
-              : pa.status === "paused"
-                ? "past_due"
-                : pa.status === "cancelled"
-                  ? "cancelled"
-                  : pa.status;
-
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          const paymentId = String(pay.id);
+
+          // Idempotency: skip if this payment is already approved in our DB
+          const { data: existing } = await supabaseAdmin
+            .from("purchases")
+            .select("id, status")
+            .eq("mp_payment_id", paymentId)
+            .maybeSingle();
+
+          if (existing?.status === "approved") return new Response("ok");
+
+          if (pay.status !== "approved") {
+            // Just record/update status, no period grant
+            await supabaseAdmin
+              .from("purchases")
+              .update({
+                status: pay.status,
+                mp_payment_id: paymentId,
+                raw: pay as unknown as Record<string, unknown>,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("mp_external_reference", pay.external_reference ?? "");
+            return new Response("ok");
+          }
+
+          // Approved → grant 90 days, summing from max(now, current period_end)
+          const { data: sub } = await supabaseAdmin
+            .from("subscriptions")
+            .select("current_period_end, trial_end")
+            .eq("user_id", userId)
+            .maybeSingle();
+
+          const now = Date.now();
+          const currentEnd = sub?.current_period_end ? new Date(sub.current_period_end).getTime() : 0;
+          const trialEnd = sub?.trial_end ? new Date(sub.trial_end).getTime() : 0;
+          const baseline = Math.max(now, currentEnd, trialEnd);
+          const newEnd = new Date(baseline + 90 * 86400000);
+          const periodStart = new Date(Math.max(now, currentEnd, trialEnd));
+
+          // Upsert subscription (no recurring fields)
           await supabaseAdmin.from("subscriptions").upsert(
             {
               user_id: userId,
-              mp_preapproval_id: pa.id,
-              status,
-              current_period_end: pa.next_payment_date ?? null,
+              status: "active",
+              current_period_end: newEnd.toISOString(),
+              cancel_at_period_end: false,
               updated_at: new Date().toISOString(),
             },
             { onConflict: "user_id" },
           );
+
+          // Upsert purchase as approved (match by mp_payment_id OR external_reference)
+          if (existing) {
+            await supabaseAdmin
+              .from("purchases")
+              .update({
+                status: "approved",
+                mp_payment_id: paymentId,
+                paid_at: pay.date_approved ?? new Date().toISOString(),
+                period_start: periodStart.toISOString(),
+                period_end: newEnd.toISOString(),
+                raw: pay as unknown as Record<string, unknown>,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", existing.id);
+          } else {
+            await supabaseAdmin.from("purchases").insert({
+              user_id: userId,
+              amount_brl: pay.transaction_amount ?? 19.9,
+              days_granted: 90,
+              status: "approved",
+              mp_payment_id: paymentId,
+              mp_external_reference: pay.external_reference ?? null,
+              paid_at: pay.date_approved ?? new Date().toISOString(),
+              period_start: periodStart.toISOString(),
+              period_end: newEnd.toISOString(),
+              raw: pay as unknown as Record<string, unknown>,
+            });
+          }
         } catch (e) {
           console.error("mp webhook err", e);
           return new Response("err", { status: 500 });
