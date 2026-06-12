@@ -109,7 +109,7 @@ export const Route = createFileRoute("/api/public/hooks/mercadopago-webhook")({
               .update({
                 status: pay.status,
                 mp_payment_id: paymentId,
-                raw: pay as unknown as Record<string, unknown>,
+                raw: pay as unknown as never,
                 updated_at: new Date().toISOString(),
               })
               .eq("mp_external_reference", pay.external_reference ?? "");
@@ -152,7 +152,7 @@ export const Route = createFileRoute("/api/public/hooks/mercadopago-webhook")({
                 paid_at: pay.date_approved ?? new Date().toISOString(),
                 period_start: periodStart.toISOString(),
                 period_end: newEnd.toISOString(),
-                raw: pay as unknown as Record<string, unknown>,
+                raw: pay as unknown as never,
                 updated_at: new Date().toISOString(),
               })
               .eq("id", existing.id);
@@ -167,7 +167,7 @@ export const Route = createFileRoute("/api/public/hooks/mercadopago-webhook")({
               paid_at: pay.date_approved ?? new Date().toISOString(),
               period_start: periodStart.toISOString(),
               period_end: newEnd.toISOString(),
-              raw: pay as unknown as Record<string, unknown>,
+              raw: pay as unknown as never,
             });
           }
         } catch (e) {
