@@ -1,13 +1,13 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, Beef, Flame, Pill, Settings } from "lucide-react";
+import { Home, Utensils, Pill, BookHeart, Calculator } from "lucide-react";
 import type { ReactNode } from "react";
 
 const tabs = [
   { to: "/app", label: "Home", icon: Home },
-  { to: "/protein", label: "Proteína", icon: Beef },
-  { to: "/calories", label: "Calorias", icon: Flame },
+  { to: "/diet", label: "Dieta", icon: Utensils },
   { to: "/medications", label: "Meds", icon: Pill },
-  { to: "/settings", label: "Ajustes", icon: Settings },
+  { to: "/diary", label: "Diário", icon: BookHeart },
+  { to: "/tools", label: "Tools", icon: Calculator },
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {

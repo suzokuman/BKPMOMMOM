@@ -13,10 +13,8 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
-import { Route as AuthenticatedProteinRouteImport } from './routes/_authenticated/protein'
 import { Route as AuthenticatedMedicationsRouteImport } from './routes/_authenticated/medications'
 import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated/history'
-import { Route as AuthenticatedCaloriesRouteImport } from './routes/_authenticated/calories'
 import { Route as AuthenticatedBillingRouteImport } from './routes/_authenticated/billing'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as ApiPublicHooksNotificationsTickRouteImport } from './routes/api/public/hooks/notifications-tick'
@@ -41,11 +39,6 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedProteinRoute = AuthenticatedProteinRouteImport.update({
-  id: '/protein',
-  path: '/protein',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
 const AuthenticatedMedicationsRoute =
   AuthenticatedMedicationsRouteImport.update({
     id: '/medications',
@@ -55,11 +48,6 @@ const AuthenticatedMedicationsRoute =
 const AuthenticatedHistoryRoute = AuthenticatedHistoryRouteImport.update({
   id: '/history',
   path: '/history',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
-const AuthenticatedCaloriesRoute = AuthenticatedCaloriesRouteImport.update({
-  id: '/calories',
-  path: '/calories',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedBillingRoute = AuthenticatedBillingRouteImport.update({
@@ -90,10 +78,8 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/app': typeof AuthenticatedAppRoute
   '/billing': typeof AuthenticatedBillingRoute
-  '/calories': typeof AuthenticatedCaloriesRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/medications': typeof AuthenticatedMedicationsRoute
-  '/protein': typeof AuthenticatedProteinRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/api/public/hooks/mercadopago-webhook': typeof ApiPublicHooksMercadopagoWebhookRoute
   '/api/public/hooks/notifications-tick': typeof ApiPublicHooksNotificationsTickRoute
@@ -103,10 +89,8 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/app': typeof AuthenticatedAppRoute
   '/billing': typeof AuthenticatedBillingRoute
-  '/calories': typeof AuthenticatedCaloriesRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/medications': typeof AuthenticatedMedicationsRoute
-  '/protein': typeof AuthenticatedProteinRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/api/public/hooks/mercadopago-webhook': typeof ApiPublicHooksMercadopagoWebhookRoute
   '/api/public/hooks/notifications-tick': typeof ApiPublicHooksNotificationsTickRoute
@@ -118,10 +102,8 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/app': typeof AuthenticatedAppRoute
   '/_authenticated/billing': typeof AuthenticatedBillingRoute
-  '/_authenticated/calories': typeof AuthenticatedCaloriesRoute
   '/_authenticated/history': typeof AuthenticatedHistoryRoute
   '/_authenticated/medications': typeof AuthenticatedMedicationsRoute
-  '/_authenticated/protein': typeof AuthenticatedProteinRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/api/public/hooks/mercadopago-webhook': typeof ApiPublicHooksMercadopagoWebhookRoute
   '/api/public/hooks/notifications-tick': typeof ApiPublicHooksNotificationsTickRoute
@@ -133,10 +115,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/app'
     | '/billing'
-    | '/calories'
     | '/history'
     | '/medications'
-    | '/protein'
     | '/settings'
     | '/api/public/hooks/mercadopago-webhook'
     | '/api/public/hooks/notifications-tick'
@@ -146,10 +126,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/app'
     | '/billing'
-    | '/calories'
     | '/history'
     | '/medications'
-    | '/protein'
     | '/settings'
     | '/api/public/hooks/mercadopago-webhook'
     | '/api/public/hooks/notifications-tick'
@@ -160,10 +138,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/app'
     | '/_authenticated/billing'
-    | '/_authenticated/calories'
     | '/_authenticated/history'
     | '/_authenticated/medications'
-    | '/_authenticated/protein'
     | '/_authenticated/settings'
     | '/api/public/hooks/mercadopago-webhook'
     | '/api/public/hooks/notifications-tick'
@@ -207,13 +183,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/protein': {
-      id: '/_authenticated/protein'
-      path: '/protein'
-      fullPath: '/protein'
-      preLoaderRoute: typeof AuthenticatedProteinRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/medications': {
       id: '/_authenticated/medications'
       path: '/medications'
@@ -226,13 +195,6 @@ declare module '@tanstack/react-router' {
       path: '/history'
       fullPath: '/history'
       preLoaderRoute: typeof AuthenticatedHistoryRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/calories': {
-      id: '/_authenticated/calories'
-      path: '/calories'
-      fullPath: '/calories'
-      preLoaderRoute: typeof AuthenticatedCaloriesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/billing': {
@@ -269,20 +231,16 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteChildren {
   AuthenticatedAppRoute: typeof AuthenticatedAppRoute
   AuthenticatedBillingRoute: typeof AuthenticatedBillingRoute
-  AuthenticatedCaloriesRoute: typeof AuthenticatedCaloriesRoute
   AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
   AuthenticatedMedicationsRoute: typeof AuthenticatedMedicationsRoute
-  AuthenticatedProteinRoute: typeof AuthenticatedProteinRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAppRoute: AuthenticatedAppRoute,
   AuthenticatedBillingRoute: AuthenticatedBillingRoute,
-  AuthenticatedCaloriesRoute: AuthenticatedCaloriesRoute,
   AuthenticatedHistoryRoute: AuthenticatedHistoryRoute,
   AuthenticatedMedicationsRoute: AuthenticatedMedicationsRoute,
-  AuthenticatedProteinRoute: AuthenticatedProteinRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
 }
 
@@ -300,3 +258,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
